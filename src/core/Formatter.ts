@@ -61,23 +61,23 @@ export default class Formatter {
     let whenCnt = 0;
     this.tokens.forEach((token, index) => {
       this.index = index;
-      if (token.type != tokenTypes.word && token.type != tokenTypes.string && token.type != tokenTypes.line_comment
-        && token.type != tokenTypes.block_comment) {
+      if (token.type !== tokenTypes.word && token.type !== tokenTypes.string && token.type !== tokenTypes.line_comment
+        && token.type !== tokenTypes.block_comment) {
         token.value = token.value.toLowerCase()
       }
       
       // 后续内容不换行单词记录
-      if (lastType == tokenTypes.reserved_no_new_line_words) {
+      if (lastType === tokenTypes.reserved_no_new_line_words) {
         noNewLineFlag = true;
       }
       // top-level后不换行
-      if (token.type != tokenTypes.whitespace) {
+      if (token.type !== tokenTypes.whitespace) {
         lastType = token.type
       };
       // 第一个when不换行
-      if (token.value.toLowerCase() == 'when' || whenCnt == 1) {
+      if (token.value.toLowerCase() === 'when' || whenCnt === 1) {
         whenCnt++;
-      } else if(token.value.toLowerCase() == 'end' || token.value.toLowerCase() == 'else') {
+      } else if(token.value.toLowerCase() === 'end' || token.value.toLowerCase() === 'else') {
         whenCnt = 0
       };
 
@@ -107,7 +107,7 @@ export default class Formatter {
         formattedQuery = this.formatTopLevelReservedWordNoIndent(token, formattedQuery);
         this.previousReservedWord = token;
       } else if (token.type === tokenTypes.reserved_newline) {
-        if (token.value != 'end' && token.value != 'else' && token.value != 'when') {
+        if (token.value !== 'end' && token.value !== 'else' && token.value !== 'when') {
           let arrayToken = token.value.split(' ')
           token.value = arrayToken[0].padStart(6,' ') + '  '
           if (arrayToken.length > 1) {
@@ -117,7 +117,7 @@ export default class Formatter {
 
         if (noNewLineFlag) {
           formattedQuery += token.value;
-        } else if (whenCnt == 1) {
+        } else if (whenCnt === 1) {
           formattedQuery += ' '+token.value+' ';
         } else {
           formattedQuery = this.formatNewlineReservedWord(token, formattedQuery);
@@ -142,7 +142,7 @@ export default class Formatter {
         if (noNewLineFlag){
           noNewLineBlock.pop()
         };
-        if (noNewLineBlock.length == 0){
+        if (noNewLineBlock.length === 0){
           noNewLineFlag = false
         }
 
@@ -158,7 +158,7 @@ export default class Formatter {
         formattedQuery = this.formatQuerySeparator(token, formattedQuery);
       } else {
         // top关键字之后数据,与不换行单词之后
-        if (lastType == tokenTypes.reserved_top_level || noNewLineFlag){
+        if (lastType === tokenTypes.reserved_top_level || noNewLineFlag){
           token.value = token.value.replace('\n','')
         } else {
           token.value = token.value.replace('\n','\n       '+this.indentation.getBlockIndent())
@@ -215,7 +215,7 @@ export default class Formatter {
     } else{
       query = this.addNewline(query) 
     };
-    if (token.value.toLowerCase() == 'when' || token.value.toLowerCase() == 'else') {
+    if (token.value.toLowerCase() === 'when' || token.value.toLowerCase() === 'else') {
       query += '    '
     }
     return query+  this.formatReservedWord(token.value) + ' '

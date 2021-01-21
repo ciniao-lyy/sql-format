@@ -8,7 +8,7 @@ import hql from './language/hivesql';
 export function activate(context: vscode.ExtensionContext) {
 
 	// 注册命令
-	let disposable = vscode.commands.registerCommand('sql.format', () => {
+	let disposable = vscode.commands.registerCommand('format', () => {
 		// 读取当前文件
 		let queryA  =  vscode.window.activeTextEditor.document.getText();
 		let languageId = vscode.window.activeTextEditor.document.languageId;
@@ -16,7 +16,7 @@ export function activate(context: vscode.ExtensionContext) {
 		let lenEnd:number = vscode.window.activeTextEditor.document.lineAt(end-1).text.length
 
 		if (languageId.toLowerCase().includes("sql")){
-			let cfg={language:'sql',uppercase:false,linesBetweenQueries:0}
+			let cfg={language:'sql',uppercase:false}
 			vscode.window.activeTextEditor.edit(
 				editBuilder=>{
 					let text = new hql(cfg).format(queryA)
@@ -24,8 +24,7 @@ export function activate(context: vscode.ExtensionContext) {
 				}
 			)
 		};
-		
-			
+
 		vscode.window.showInformationMessage("format-success");
 	});
 

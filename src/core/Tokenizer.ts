@@ -1,6 +1,4 @@
-// import { isEmpty } from "lodash/index";
 import tokenTypes from './tokenTypes';
-// import escapeRegExp from 'lodash/escapeRegExp';
 import { escapeRegExp,isEmpty } from "lodash/index";
 
 export default class Tokenizer {
@@ -169,10 +167,10 @@ export default class Tokenizer {
       token = this.getNextToken(input, token);
       input = input.substring(token.value.length);
       // 逗号前+\n
-      if (token.value==','){
+      if (token.value===','){
         commaFlag=true
       } else {
-        if (commaFlag && token.type != tokenTypes.whitespace) {
+        if (commaFlag && token.type !== tokenTypes.whitespace) {
           // Advance the string
           token.value = '\n,'+token.value;
           commaFlag=false;
