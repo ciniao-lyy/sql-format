@@ -1,5 +1,4 @@
-// import includes from 'lodash/includes';
-import {includes} from 'lodash/index';
+import {includes, isLength} from 'lodash/index';
 import tokenTypes from './tokenTypes';
 
 import Indentation from './Indentation';
@@ -7,6 +6,7 @@ import InlineBlock from './InlineBlock';
 import Params from './Params';
 
 const trimSpacesEnd = str => str.replace(/[ \t]+$/u, '');
+const trimSpacesStart = str => str.replace(/^[ \t]|[ \t]+$/u, '');
 
 export default class Formatter {
   /**
@@ -55,25 +55,64 @@ export default class Formatter {
   getFormattedQueryFromTokens() {
     let formattedQuery = '';
     //增加
+    let groupingFlag = false;
     let lastType = '';
+    let commentFlag = false;
+    let lastVaule = '';
     let noNewLineFlag = false;
     let noNewLineBlock = [];
     let whenCnt = 0;
+    let createFlag = false;
+    let createArray = []
+    let createSubArray = []
+    let i = 0
+    let f1_max = 0
+    let f2_max = 0
     this.tokens.forEach((token, index) => {
       this.index = index;
+      // 关键字小写
       if (token.type !== tokenTypes.word && token.type !== tokenTypes.string && token.type !== tokenTypes.line_comment
         && token.type !== tokenTypes.block_comment) {
         token.value = token.value.toLowerCase()
       }
-      
+      // 记录建表语句
+      if (token.value === 'create') {
+        createFlag = true;
+      } else if (token.value.includes(';')) {
+        createFlag = false;
+      };
+      // grouping
+      if (groupingFlag && token.type !== tokenTypes.whitespace && token.value !== 'sets'
+      && ((token.value !== '(' && this.indentation.blockTypes.length === 0)
+          || this.indentation.blockTypes.length !== 0)
+      ){
+        if (this.indentation.blockTypes.length === 0){
+          groupingFlag = false;
+          noNewLineFlag = false;
+        } else {
+          noNewLineFlag = true
+        }
+        if (token.value === '(') {
+          token.value = '        ' + this.indentation.getBlockIndent() + token.value
+        }
+      }
+      if (token.value === 'grouping') groupingFlag = true;
       // 后续内容不换行单词记录
-      if (lastType === tokenTypes.reserved_no_new_line_words) {
+      if (lastType === tokenTypes.reserved_no_new_line_words && !createFlag) {
         noNewLineFlag = true;
       }
       // top-level后不换行
       if (token.type !== tokenTypes.whitespace) {
         lastType = token.type
       };
+      // comment后，换行
+      if (commentFlag && token.type !== tokenTypes.whitespace) {
+        if (!token.value.includes('\n') || token.type === tokenTypes.line_comment) formattedQuery += '\n        ' + this.indentation.getBlockIndent();
+        // if (token.type === tokenTypes.line_comment) formattedQuery += '\n        ' + this.indentation.getBlockIndent()
+        commentFlag = false;
+      }
+      // comment后特殊处理
+      if (token.type === tokenTypes.line_comment || token.type === tokenTypes.block_comment) commentFlag=true;
       // 第一个when不换行
       if (token.value.toLowerCase() === 'when' || whenCnt === 1) {
         whenCnt++;
@@ -83,22 +122,113 @@ export default class Formatter {
 
       if (this.tokenOverride) token = this.tokenOverride(token, this.previousReservedWord) || token;
 
+
+      // 跳过不可见字符操作
       if (token.type === tokenTypes.whitespace) {
+        // 记录上次的不可见字符
+        lastVaule = token.value
         // ignore (we do our own whitespace formatting)
+      // 建表语句阶段
+      } else if (createFlag) {
+        token.value = token.value.replace('`','').replace('`','')
+        // 判断是否括号
+        if (token.type === tokenTypes.open_paren) {
+          this.indentation.increaseBlockLevel()
+        } else if (token.type === tokenTypes.close_paren){
+          this.indentation.decreaseBlockLevel()
+          // 跳出字段循环之后
+          if (this.indentation.blockTypes.length === 0) {
+            // 最后个属性
+            if (createSubArray.length === 2){
+              createSubArray.push('comment')
+              createSubArray.push("''")
+            }
+            createArray.push(createSubArray)
+            createSubArray = []
+            // 判断最大长度
+            createArray.forEach(function (createSubArray) {
+              f1_max = f1_max>createSubArray[0].length?f1_max: createSubArray[0].length
+              f2_max = f2_max>createSubArray[1].length?f2_max: createSubArray[1].length
+            });
+            //补足空格
+            // createArray.map(sub=>sub.map(arr=>[arr[0].padEnd(f1_max,' '),arr[1].padEnd(f2_max,' '),arr[2],arr[3]].join("\n")
+            // createArray = createArray.map(sub=>sub.join("  "));
+            createArray = createArray.map(sub=>(['  '+sub[0].padEnd(f1_max,' '),sub[1].padEnd(f2_max,' '),sub[2],sub[3]]).join("  "));
+
+            // 格式化处理
+            formattedQuery += '\n(\n' + createArray.join("\n")
+            f1_max = 0
+            f2_max = 0
+            createArray = []
+          }
+        };
+        // 非字段阶段处理
+        if (this.indentation.blockTypes.length === 0) {
+          
+          if (token.type === tokenTypes.close_paren ||
+             token.value === 'comment' ||
+             token.value === 'partitioned' ||
+             token.value === 'stored' ||
+             token.value ===  'with' ||
+             token.value ===  'row' ||
+             token.value ===  'outputformat' ||
+             token.value ===  'location') {
+              formattedQuery += '\n'
+          }
+          if (token.value === '$' ||
+          token.value === '{' ||
+          token.value === '}' ||
+          token.value === '.'){
+            formattedQuery = (token.value === '$')?formattedQuery+token.value:trimSpacesStart(trimSpacesStart(formattedQuery))+token.value
+          } else if (token.value === 'create'){
+            formattedQuery = trimSpacesEnd(formattedQuery) + ((formattedQuery==='')?'':'\n\n') + token.value + ' '
+          } else {
+            formattedQuery += token.value + ' '
+          }
+        // 字段阶段
+        } else if (this.indentation.blockTypes.length === 1){
+          if (!token.value.includes('\n,')) {
+            if (token.value !== '(' && token.value !== ')') {
+              createSubArray.push(token.value)
+            } else if (token.value === ')') {
+              createSubArray[createSubArray.length-1] += token.value.replace('\n','')
+            }
+          } else {
+            // 当前字段结尾
+            if (createSubArray.length === 2){
+              createSubArray.push('comment')
+              createSubArray.push('')
+            }
+            createArray.push(createSubArray)
+            createSubArray=[token.value.replace('\n','')]
+          }
+        // 字段包含括号
+        } else if (this.indentation.blockTypes.length === 2){
+          createSubArray[createSubArray.length-1] += token.value.replace('\n','')
+        }
+      // 注释处理
       } else if (token.type === tokenTypes.line_comment) {
-        formattedQuery = this.formatLineComment(token, formattedQuery);
+        token.value = trimSpacesStart(trimSpacesEnd(token.value.replace('\n','')))
+        if (lastVaule.includes('\n')) {
+          token.value = '\n       '+this.indentation.getBlockIndent()+token.value
+        }
+        formattedQuery += token.value
+        // formattedQuery = this.formatLineComment(token, formattedQuery);
       } else if (token.type === tokenTypes.block_comment) {
         formattedQuery = this.formatBlockComment(token, formattedQuery);
       } else if (token.type === tokenTypes.reserved_top_level) {
+        // 不换行flag
         if (noNewLineFlag) {
-          formattedQuery += token.value
+          formattedQuery += token.value + ' '
         } else {
+          // token切分，group by➡️group  by等
           let arrayToken = token.value.split(' ')
+          token.value = arrayToken[0].padStart(6,' ') + '  '
           if (arrayToken.length > 1) {
-            token.value = arrayToken[0].padStart(6,' ') + '  ' + arrayToken.slice(1,).join("")+'  '
+            token.value += arrayToken.slice(1,).join("")+'  '
           }
-          else {
-            token.value = arrayToken[0].padStart(6,' ') + '  '
+          if (token.value.includes('insert')){
+            formattedQuery += '\n\n'
           }
           formattedQuery = this.formatTopLevelReservedWord(token, formattedQuery);
           this.previousReservedWord = token;
@@ -109,6 +239,9 @@ export default class Formatter {
       } else if (token.type === tokenTypes.reserved_newline) {
         if (token.value !== 'end' && token.value !== 'else' && token.value !== 'when') {
           let arrayToken = token.value.split(' ')
+          if (this.indentation.blockTypes.length > 0) {
+            arrayToken[0] = arrayToken[0].padStart(6,' ')
+          }
           token.value = arrayToken[0].padStart(6,' ') + '  '
           if (arrayToken.length > 1) {
             token.value += arrayToken.slice(1,).join("")+'  '
@@ -116,7 +249,7 @@ export default class Formatter {
         }
 
         if (noNewLineFlag) {
-          formattedQuery += token.value;
+          formattedQuery += token.value + ' ';
         } else if (whenCnt === 1) {
           formattedQuery += token.value+' ';
         } else {
@@ -124,18 +257,29 @@ export default class Formatter {
         }
         this.previousReservedWord = token;
       } else if (token.type === tokenTypes.reserved) {
+        if (noNewLineFlag) {
+          token.value = token.value.replace('\n','')
+        }
         formattedQuery = this.formatWithSpaces(token, formattedQuery);
         this.previousReservedWord = token;
       } else if (token.type === tokenTypes.open_paren) {
         if (noNewLineFlag) {
           noNewLineBlock.push('a')
-          formattedQuery = formattedQuery + token.value.replace('\n,','\n       '+this.indentation.getBlockIndent()+',')
+          if (token.value.includes('case')) {
+            formattedQuery += token.value.replace('\n,','\n       '+this.indentation.getBlockIndent()+',') + ' '
+          } else {
+            formattedQuery = trimSpacesEnd(formattedQuery) + token.value.replace('\n,','\n       '+this.indentation.getBlockIndent()+',')
+          }
         } else {
           formattedQuery = this.formatOpeningParentheses(token, formattedQuery);
         }
       } else if (token.type === tokenTypes.close_paren) {
         if (noNewLineBlock.length > 0) {
-          formattedQuery += token.value
+          if (token.value.includes('end')) {
+            formattedQuery += token.value + ' '
+          } else {
+            formattedQuery = trimSpacesEnd(formattedQuery) + token.value + ' '
+          }
         } else {
           formattedQuery = this.formatClosingParentheses(token, formattedQuery);
         };
@@ -144,11 +288,15 @@ export default class Formatter {
         };
         if (noNewLineBlock.length === 0){
           noNewLineFlag = false
-        }
+        };
 
       } else if (token.type === tokenTypes.placeholder) {
         formattedQuery = this.formatPlaceholder(token, formattedQuery);
-      } else if (token.value === ',') {
+      // } else if (token.type === tokenTypes.reserved_newline) {
+        // noNewLineFlag = true
+        // token.value = token.value.replace('\n','')
+
+      }else if (token.value === ',') {
         formattedQuery = this.formatComma(token, formattedQuery);
       } else if (token.value === ':') {
         formattedQuery = this.formatWithSpaceAfter(token, formattedQuery);
@@ -160,10 +308,21 @@ export default class Formatter {
         // top关键字之后数据,与不换行单词之后
         if (lastType === tokenTypes.reserved_top_level || noNewLineFlag){
           token.value = token.value.replace('\n','')
+        // } else if (lastComment !== '' && !token.value.includes('\n') ) {
+        //   token.value += '\n       '+this.indentation.getBlockIndent()
+        //   lastComment = ''
         } else {
           token.value = token.value.replace('\n','\n       '+this.indentation.getBlockIndent())
         }
-        formattedQuery = this.formatWithSpaces(token, formattedQuery);
+        // 特殊字符
+        if (token.value === '$' ||
+          token.value === '{' ||
+          token.value === '}' ||
+          token.value === '.'){
+            formattedQuery = (token.value === '$')?formattedQuery + token.value:trimSpacesStart(trimSpacesStart(formattedQuery)) + token.value
+          } else {
+            formattedQuery = this.formatWithSpaces(token, formattedQuery)
+          };
       }
     });
     return formattedQuery;
@@ -171,14 +330,14 @@ export default class Formatter {
 
   formatLineComment(token, query) {
     // query = trimSpacesEnd(query);
-    return query + token.value.replace('\n','');
+    // return query + token.value.replace('\n','');
     // return this.addNewline(query + token.value);
   }
 
   formatBlockComment(token, query) {
     query = trimSpacesEnd(query);
-    return query + '  '+ token.value+'\n';
-    return this.addNewline(this.addNewline(query) + this.indentComment(token.value));
+    return query + '  '+ token.value;
+    // return this.addNewline(this.addNewline(query) + this.indentComment(token.value));
   }
 
   indentComment(comment) {
@@ -213,12 +372,14 @@ export default class Formatter {
     if (this.indentation.blockTypes.length > 0) {
       query = this.addBlockNewline(query)
     } else{
-      query = this.addNewline(query) 
+      query = trimSpacesEnd(query);
+      if (!query.endsWith('\n')) query += '\n';
+      // query = this.addNewline(query)
     };
     if (token.value.toLowerCase() === 'when' || token.value.toLowerCase() === 'else') {
-      query += '    '
+      return query + '    ' + this.formatReservedWord(token.value) +' '
     }
-    return query+  this.formatReservedWord(token.value) + ' '
+    return query+  this.formatReservedWord(token.value)
     // return query+  this.equalizeWhitespace(this.formatReservedWord(token.value)) + ' '
   }
 
@@ -240,27 +401,28 @@ export default class Formatter {
       query = trimSpacesEnd(query);
     }
     // 补足缩进
-    let caseFlag = token.value
+    // 默认缩进
     token.value = token.value.replace('\n,','\n       '+this.indentation.getBlockIndent()+',')
-  
-    query += this.cfg.uppercase ? token.value.toUpperCase() : token.value.toLowerCase();
+
+    let caseFlag = token.value
+    query += token.value;
 
     this.inlineBlock.beginIfPossible(this.tokens, this.index);
 
     if (!this.inlineBlock.isActive()) {
       this.indentation.increaseBlockLevel();
-      if (caseFlag.toLowerCase() !== '\n,case' && caseFlag.toLowerCase() !== 'case') {
+      if (!caseFlag.toLowerCase().includes('case')) {
         query = this.addBlockNewline(query);
       } else {
         query += ' '
       }
-    }    
+    }
     return query;
   }
 
   // Closing parentheses decrease the block indent level
   formatClosingParentheses(token, query) {
-    token.value = this.cfg.uppercase ? token.value.toUpperCase() : token.value.toLowerCase();
+    token.value = token.value;
     if (this.inlineBlock.isActive()) {
       this.inlineBlock.end();
       return this.formatWithSpaceAfter(token, query);
@@ -307,12 +469,19 @@ export default class Formatter {
   }
 
   formatReservedWord(value) {
-    return this.cfg.uppercase ? value.toUpperCase() : value.toLowerCase();
+    return value;
   }
 
   formatQuerySeparator(token, query) {
     this.indentation.resetIndentation();
-    return trimSpacesEnd(query) + token.value + '\n'.repeat(this.cfg.linesBetweenQueries || 1);
+    return trimSpacesEnd(query) + '\n' + token.value + '\n'.repeat(this.cfg.linesBetweenQueries || 1);
+  }
+
+  // create table fileds
+  formatCreateTableFiled(token) {
+    // （），修改锁进级别
+
+    return 'query';
   }
 
   addNewline(query) {

@@ -15,17 +15,23 @@ export function activate(context: vscode.ExtensionContext) {
 		let end:number = vscode.window.activeTextEditor.document.lineCount;
 		let lenEnd:number = vscode.window.activeTextEditor.document.lineAt(end-1).text.length
 
+		
 		if (languageId.toLowerCase().includes("sql")){
-			let cfg={language:'sql',uppercase:false}
+			let cfg={language:languageId,uppercase:false,linesBetweenQueries:2}
 			vscode.window.activeTextEditor.edit(
 				editBuilder=>{
-					let text = new hql(cfg).format(queryA)
-					editBuilder.replace(new vscode.Range(new vscode.Position(0, 0), new vscode.Position(end, lenEnd)), text);
+					try {
+						let text = new hql(cfg).format(queryA)
+						editBuilder.replace(new vscode.Range(new vscode.Position(0, 0), new vscode.Position(end, lenEnd)), text);
+						vscode.window.showInformationMessage("format-successed");
+					} catch (error){
+						vscode.window.showInformationMessage("format-failed:"+error);
+					} finally {
+
+					}
 				}
 			)
 		};
-
-		vscode.window.showInformationMessage("format-success");
 	});
 
 	context.subscriptions.push(disposable);

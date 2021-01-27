@@ -1,11 +1,25 @@
-import Formatter from '../core/Formatter';
+import Formatter from '../core/FormatterSelf';
 import Tokenizer from '../core/Tokenizer';
 import tokenTypes from '../core/tokenTypes';
 
 const reservedWords = [
   'add',
   'between',
-  'table'
+  'table',
+  'distinct',
+  'external',
+  'exists',
+  'serdeproperties',
+  'inputformat',
+  'comment',
+  'by',
+  'as',
+  'null',
+  'parquet',
+  'row',
+  'format',
+  'temporary',
+  'function'
 ];
 
 const reservedTopLevelWords = [
@@ -15,7 +29,6 @@ const reservedTopLevelWords = [
   'lateral view',
   'alter column',
   'alter table',
-  'end',
   'from',
   'group by',
   'having',
@@ -28,10 +41,15 @@ const reservedTopLevelWords = [
   'set',
   'where',
   'create',
-  'create external'
+  'stored',
+  'outputformat',
+  'location',
+  'inputformat',
+  'with',
+  'grouping'
 ];
 
-const reservedTopLevelWordsNoIndent = ['INTERSECT', 'INTERSECT ALL', 'MINUS', 'UNION', 'UNION ALL'];
+const reservedTopLevelWordsNoIndent = ['INTERSECT', 'INTERSECT ALL', 'MINUS'];
 
 const reservedNewlineWords = [
   'inner join',
@@ -43,10 +61,10 @@ const reservedNewlineWords = [
   'right join',
   'right outer join',
   'lateral view',
-  'explode',
-  'end',
   'else',
-  'when'
+  'when',
+  'union all',
+  'union'
 ];
 
 const tokenOverride = (token, previousReservedToken) => {
@@ -59,6 +77,32 @@ const tokenOverride = (token, previousReservedToken) => {
     return token;
   }
 };
+const reservedNoNewLineWords=[
+  'if',
+  'over',
+  'coalesce',
+  'from_unixtime',
+  'lead',
+  'lag',
+  'date_format',
+  'date_add',
+  'explode',
+  'json_tuple',
+  'get_json_object',
+  'nvl',
+  'concat',
+  'partitioned',
+  'in',
+  'round',
+  'cast',
+  'sum',
+  'count',
+  'substr',
+  'split',
+  'replace',
+  'regexp_replace',
+  'regexp_extract'
+];
 
 let tokenizer;
 
@@ -85,14 +129,13 @@ export default class HQLFormatter {
         reservedNewlineWords,
         reservedTopLevelWordsNoIndent,
         stringTypes: [`""`, "''", '``'],
-        // stringTypes: [`""`, "n''", "''", '``'],
         openParens: ['(', 'case'],
         closeParens: [')', 'end'],
         indexedPlaceholderTypes: ['?'],
         namedPlaceholderTypes: [':'],
         lineCommentTypes: ['--'],
         specialWordChars: ['_', '$', '#', '.', '@'],
-        reservedNoNewLineWords:['if','over','coalesce','from_unixtime','lead','lag','date_format','date_add']
+        reservedNoNewLineWords
       });
     }
     return new Formatter(this.cfg, tokenizer, tokenOverride).format(query);

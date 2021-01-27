@@ -170,7 +170,8 @@ export default class Tokenizer {
       if (token.value===','){
         commaFlag=true
       } else {
-        if (commaFlag && token.type !== tokenTypes.whitespace) {
+        // 逗号，并且不等于空行，不等于注释
+        if (commaFlag && token.type !== tokenTypes.whitespace && token.type != tokenTypes.line_comment) {
           // Advance the string
           token.value = '\n,'+token.value;
           commaFlag=false;

@@ -86,5 +86,6 @@ export default class Indentation {
 
   resetIndentation() {
     this.indentTypes = [];
+    this.blockTypes = [];
   }
 }
