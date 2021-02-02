@@ -71,14 +71,14 @@ export default class Formatter {
     this.tokens.forEach((token, index) => {
       this.index = index;
       // 关键字小写
-      if (token.type !== tokenTypes.word && token.type !== tokenTypes.string && token.type !== tokenTypes.line_comment
+      if (token.type !== tokenTypes.string && token.type !== tokenTypes.line_comment
         && token.type !== tokenTypes.block_comment) {
         token.value = token.value.toLowerCase()
       }
       // 记录建表语句
       if (token.value === 'create') {
         createFlag = true;
-      } else if (token.value.includes(';')) {
+      } else if (token.value === ';') {
         createFlag = false;
       };
       // grouping
@@ -130,6 +130,9 @@ export default class Formatter {
         // ignore (we do our own whitespace formatting)
       // 建表语句阶段
       } else if (createFlag) {
+        if (token.value.includes('access_type')) {
+          console.log('')
+        }
         token.value = token.value.replace('`','').replace('`','')
         // 判断是否括号
         if (token.type === tokenTypes.open_paren) {

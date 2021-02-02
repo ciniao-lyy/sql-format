@@ -101,7 +101,11 @@ const reservedNoNewLineWords=[
   'split',
   'replace',
   'regexp_replace',
-  'regexp_extract'
+  'regexp_extract',
+  'lpad',
+  'max',
+  'min',
+  'concat_ws'
 ];
 
 let tokenizer;
