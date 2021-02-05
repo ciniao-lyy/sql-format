@@ -105,7 +105,8 @@ const reservedNoNewLineWords=[
   'lpad',
   'max',
   'min',
-  'concat_ws'
+  'concat_ws',
+  'stack'
 ];
 
 let tokenizer;

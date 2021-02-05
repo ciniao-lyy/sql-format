@@ -221,7 +221,7 @@ export default class Formatter {
         formattedQuery = this.formatBlockComment(token, formattedQuery);
       } else if (token.type === tokenTypes.reserved_top_level) {
         // 不换行flag
-        if (noNewLineFlag) {
+        if (noNewLineFlag || whenCnt > 0) {
           formattedQuery += token.value + ' '
         } else {
           // token切分，group by➡️group  by等

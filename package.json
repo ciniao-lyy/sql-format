@@ -3,7 +3,8 @@
 	"displayName": "sql-format",
 	"publisher":"ciniao0504",
 	"description": "sql-format",
-	"version": "0.9.7",
+	"version": "0.9.8",
+	"repository":"git@github.com:ciniao-lyy/sql-format.git",
 	"engines": {
 		"vscode": "^1.52.0"
 	},
