@@ -3,7 +3,6 @@ import Tokenizer from '../core/Tokenizer';
 import tokenTypes from '../core/tokenTypes';
 
 const reservedWords = [
-  'add',
   'between',
   'table',
   'distinct',
@@ -14,7 +13,6 @@ const reservedWords = [
   'comment',
   'by',
   'as',
-  'null',
   'parquet',
   'row',
   'format',
@@ -24,11 +22,12 @@ const reservedWords = [
 
 const reservedTopLevelWords = [
   'and',
-  'add',
+  'add jar',
   'on',
   'lateral view',
   'alter column',
   'alter table',
+  'values',
   'from',
   'group by',
   'having',
@@ -52,14 +51,16 @@ const reservedTopLevelWords = [
 const reservedTopLevelWordsNoIndent = ['INTERSECT', 'INTERSECT ALL', 'MINUS'];
 
 const reservedNewlineWords = [
+  'cross join',
   'inner join',
-  'join',
+  'full join',
   'left join',
   'left outer join',
   'or',
   'outer join',
   'right join',
   'right outer join',
+  'join',
   'lateral view',
   'else',
   'when',
@@ -78,6 +79,11 @@ const tokenOverride = (token, previousReservedToken) => {
   }
 };
 const reservedNoNewLineWords=[
+  'least',
+  'greatest',
+  'unix_timestamp',
+  'to_unix_timestamp',
+  'to_date',
   'if',
   'over',
   'coalesce',
@@ -86,15 +92,22 @@ const reservedNoNewLineWords=[
   'lag',
   'date_format',
   'date_add',
+  'date_sub',
   'explode',
   'json_tuple',
   'get_json_object',
   'nvl',
+  'format_datetime',
   'concat',
+  'collect_set',
+  'collect_list',
   'partitioned',
   'in',
   'round',
   'cast',
+  'ifnull',
+  'add_months',
+  'trunc',
   'sum',
   'count',
   'substr',
@@ -103,10 +116,21 @@ const reservedNoNewLineWords=[
   'regexp_replace',
   'regexp_extract',
   'lpad',
+  'rpad',
   'max',
   'min',
+  'length',
   'concat_ws',
-  'stack'
+  'stack',
+  'str_to_map',
+  'instr',
+  'userinfodecypt',
+  'userinfodecrypt',
+  'datediff',
+  'partition',
+  'sequence',
+  'percentile',
+  'months_between'
 ];
 
 let tokenizer;
@@ -139,7 +163,7 @@ export default class HQLFormatter {
         indexedPlaceholderTypes: ['?'],
         namedPlaceholderTypes: [':'],
         lineCommentTypes: ['--'],
-        specialWordChars: ['_', '$', '#', '.', '@'],
+        specialWordChars: ['_', '$', '#', '.', '@','/'],
         reservedNoNewLineWords
       });
     }
