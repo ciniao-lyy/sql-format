@@ -1,3 +1,4 @@
+```SQL
 change languige mode:sql or *sql
 
 exsample:
@@ -18,3 +19,4 @@ select  field1
              when c1 = 'c2' then 2
              else 0
          end
+```
