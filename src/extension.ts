@@ -3,7 +3,6 @@
 import * as vscode from 'vscode';
 import hql from './language/hivesql';
 
-
 // 插件入口
 export function activate(context: vscode.ExtensionContext) {
 
@@ -11,8 +10,11 @@ export function activate(context: vscode.ExtensionContext) {
 	let disposable = vscode.commands.registerCommand('format', () => {
 		// 读取当前文件
 		let queryA  =  vscode.window.activeTextEditor.document.getText();
+		// 语言
 		let languageId = vscode.window.activeTextEditor.document.languageId;
+		// 行数
 		let end:number = vscode.window.activeTextEditor.document.lineCount;
+		// 行尾
 		let lenEnd:number = vscode.window.activeTextEditor.document.lineAt(end-1).text.length
 
 		
@@ -31,6 +33,8 @@ export function activate(context: vscode.ExtensionContext) {
 					}
 				}
 			)
+		} else {
+			vscode.window.showInformationMessage("please change the language to sql");
 		};
 	});
 
